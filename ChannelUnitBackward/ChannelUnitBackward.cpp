@@ -12,9 +12,10 @@
 
 int ChannelUnitBackward::Run()
 {
-    int sockfd, num;
-    struct sockaddr_in server;
     unsigned char buf[BUFFER_LENGTH];
+    /*
+	int sockfd, num;
+    struct sockaddr_in server;
     
     if((sockfd= socket(AF_INET, SOCK_STREAM, 0)) == -1)
     {
@@ -24,7 +25,7 @@ int ChannelUnitBackward::Run()
 
     bzero(&server, sizeof(server));
     server.sin_family = AF_INET;
-    server.sin_port = htons(m_serverPort);
+    server.sin_port = htons(m_serverBackwardPort);
     server.sin_addr.s_addr = inet_addr(m_serverIP.data());
      
     if(connect(sockfd, (struct sockaddr *)&server, sizeof(server)) == -1)
@@ -32,7 +33,19 @@ int ChannelUnitBackward::Run()
         printf("connect() error\n");
         return -1;
     }
-   
+    */
+    if (! m_TcpSocket.Create())
+	{
+		printf("Init TCP socket error!\n");
+		return -1;
+	}
+	m_TcpSocket.SetBlocking(true);
+	if (! m_TcpSocket.Connect(m_serverIP.data(), m_serverBackwardPort) )
+	{
+		printf("Connect TCP error!\n");
+		return -1;
+	}
+
 	if (m_UDPInterface.Create(m_clientPort))
 	{
 		printf("Init UDP socket error!\n");
@@ -49,11 +62,11 @@ int ChannelUnitBackward::Run()
             printf("Recv UDP error!\n");
 			return -1;
         }  
-		send(sockfd, buf, iLen, 0);
+		m_TcpSocket.SendPacket((char*) buf, iLen);
 
     }
     
-    close(sockfd);
+    m_TcpSocket.Close();
     return 0;
 
 }
@@ -66,25 +79,19 @@ int ChannelUnitBackward::Init()
 void ChannelUnitBackward::Test()
 {
     printf("Server IP: %s\n", m_serverIP.data());
-    printf("Server Port: %d\n\n", m_serverPort);
-	printf("Client Length: %d\n", m_clientIPs.size());
+    printf("Server Forward Port: %d\n\n", m_serverForwardPort);
 	printf("Client Port: %d\n", m_clientPort);
-	for (int i = 0; i < m_clientIPs.size(); i++)
-	{
-	    printf("Cleint IP: %s\n", m_clientIPs[i].data());
-	    printf("Cleint Port: %d\n", m_clientPorts[i]);
-	}
-
 }
 
 int ChannelUnitBackward::readInitFile() 
 {
     char buf[BUFFER_LENGTH];
 
-    m_serverPort = (unsigned short) read_profile_int("Server", "Port", 0, INI_FILE_NAME);
-    if (m_serverPort == 0)
+	/* READ server */
+    m_serverBackwardPort = (unsigned short) read_profile_int("Server", "BackwardPort", 0, INI_FILE_NAME);
+    if (m_serverBackwardPort == 0)
     {
-        printf("%s: Read ServerPort from %s failed!\n", m_name.data(), INI_FILE_NAME);
+        printf("%s: Read ServerBackwardPort from %s failed!\n", m_name.data(), INI_FILE_NAME);
         return -1;
     }
 
@@ -95,6 +102,38 @@ int ChannelUnitBackward::readInitFile()
 	}
 	m_serverIP = buf;
 
+	int serverForwardPortLength = 0, serverForwardPortIndex = 0;
+    serverForwardPortLength = (unsigned short) read_profile_int("Server", "ForwardPortLength", 0, INI_FILE_NAME);
+    if (serverForwardPortLength == 0)
+    {
+        printf("%s: Read ServerForwardPortLength from %s failed!\n", m_name.data(), INI_FILE_NAME);
+        return -1;
+    }
+
+    serverForwardPortIndex = (unsigned short) read_profile_int("Server", "serverForwardPortIndex", 0, INI_FILE_NAME);
+    if (serverForwardPortLength == 0)
+    {
+        printf("%s: Read ServerForwardPortIndex from %s failed!\n", m_name.data(), INI_FILE_NAME);
+        return -1;
+    }
+
+    vector<unsigned short> serverForwardPorts;
+	for (int i = 0; i < serverForwardPortLength; i ++)
+    {
+        string sector = "ForwardPort" + std::to_string(i);
+        
+		unsigned short port = (unsigned short) read_profile_int("Server", sector.data(), 0, INI_FILE_NAME);
+        if (port == 0)
+        {
+            printf("%s: Read server forward port from %s failed!\n", m_name.data(), INI_FILE_NAME);
+            return -1;
+        }
+    
+        serverForwardPorts.push_back(port);
+	}
+	m_serverForwardPort = serverForwardPorts[serverForwardPortIndex];
+	
+	/* READ client */
 	int clientNum = read_profile_int("Client", "Length", -1, INI_FILE_NAME);
 	if (clientNum == -1)
 	{
