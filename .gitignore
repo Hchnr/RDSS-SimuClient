@@ -3,3 +3,9 @@ ChannelUnitBackward/build/
 ChannelUnitBackward/config.ini.bak
 ChannelUnitForward/ChannelUnitForward
 ChannelUnitForward/build/
+Client/build/
+Client/build/*
+tags
+ChannelUnitForward/tags
+ChannelUnitBackward/tags
+Client/tags
