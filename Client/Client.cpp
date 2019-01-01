@@ -19,7 +19,106 @@ int Client::Run()
 {
     userOn();
 	/* need central station return, need peer confirm */
-	userSend(true, true, 2);
+	// userSend(true, true, 2);
+    userRecv();
+}
+
+int Client::userRecvWait(unsigned int id)
+{
+    unsigned char buf[BUFFER_LENGTH] = {
+    0x00, 0x00, 0x00, 0x00, /* 4 dest user */
+    0x00, 0x00, 0x00, 0x01, /* 8 src user */
+    0x00, 0xff,             /* 10 frame id */
+    0x80, 0x00,             /* 12 OPTION */
+    0x00,                   /* 13 OPTION kind */
+    0x00,                   /* 14 OPTION hint */
+    };
+
+    /* SET dest id id*/
+    unsigned int *pDest = (unsigned int *) (buf + POS::dest_user);
+    *pDest = htonl(id);
+
+    /* SET src id id*/
+    unsigned int *pSrc = (unsigned int *) (buf + POS::src_user);
+    *pSrc = htonl(m_userID);
+
+    /* SET frame id*/
+    unsigned short *pFrame = (unsigned short *) (buf + POS::frame_id);
+    *pFrame = htons(m_frameNo);
+
+    /* SET option */
+    unsigned char *pOpt = buf + POS::option;
+    *pOpt = 0x80;
+
+    /* SET option kind */
+    unsigned char *pKind = buf + POS::option + 2;
+    *pKind = 0x60;
+
+    int packet_len = 2 + POS::data;
+    printf("[send packet to: %s %d]\n", m_channelIP.data(), m_channelPort);
+    for(int i = 0; i < packet_len; i++)
+         printf("0x%02X ", buf[i]);
+    printf("\n");
+
+    int iSend = m_UDPInterface.SendTo(buf, packet_len, m_channelIP, m_channelPort);
+    if (iSend < 0)
+    {
+        printf("sendto(): error %d when user recv.\n", iSend);
+        return -1;
+    }
+
+}
+ 
+int Client::userRecv()
+{
+    unsigned char buf[BUFFER_LENGTH];
+    string srcIP;
+	unsigned short srcPort;
+	int nRet;
+
+    while(1) {
+        int iRecv = m_UDPInterface.RecvFrom(buf, BUFFER_LENGTH, srcIP, srcPort);
+    	if(iRecv < 0)
+    	{
+    	    printf("recvfrom(): error %d when user send.\n", iRecv);
+    		continue;
+        }
+
+		printf("[recv packet from %s %d:] \n", srcIP.data(), srcPort);
+	    for(int i = 0; i < iRecv; i++)
+	        printf("0x%02X ", buf[i]);
+        printf("\n");
+
+		if( ntohl(*(int*) (buf+dest_user)) != m_userID) {
+			printf("dest_user_id: %d \n", ntohl(* (int*) (buf+dest_user)));
+		    continue;
+		}
+		unsigned int id =  ntohl(*(int*) (buf+src_user));
+		/*
+		if( ntohs(*(unsigned short*) (buf+frame_id)) != m_frameNo + 1) {
+			printf("frame_id: %d %d \n", m_frameNo, ntohs(* (unsigned short*) (buf+frame_id)));
+		    continue;
+		}
+		*/
+		switch(*(buf+option))
+		{
+		    case 0x40:
+			case 0x50:
+			case 0x51:
+			case 0x60: printf("收到短消息：");
+					   for(int i = POS::data; i < iRecv; i++)
+						   printf("0x%02X ", buf[i]);
+					   printf("\n");
+					   break;
+		}
+		if(*(buf + option) == 0x60) {
+		    userRecvWait(id);
+		    continue;
+		}
+
+	}
+
+    return 1;
 }
 
 int Client::userSendWaitCnf(unsigned int id)

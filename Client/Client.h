@@ -46,6 +46,8 @@ class Client
 	int userOn();
 	int userOnWait();
 	int userSend(bool isRet, bool isCnf, unsigned int id);
+	int userRecv();
+	int userRecvWait(unsigned int id);
 	int userSendWaitRet(unsigned int id);
 	int userSendWaitCnf(unsigned int id);
 };
