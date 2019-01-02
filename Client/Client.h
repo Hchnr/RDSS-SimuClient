@@ -45,6 +45,8 @@ class Client
 	int readInitFile();
 	int userOn();
 	int userOnWait();
+	int userMove();
+	int userMoveWait();
 	int userSend(bool isRet, bool isCnf, unsigned int id);
 	int userRecv();
 	int userRecvWait(unsigned int id);

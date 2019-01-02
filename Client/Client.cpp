@@ -23,6 +23,109 @@ int Client::Run()
     userRecv();
 }
 
+int Client::userMoveWait()
+{
+    unsigned char buf[BUFFER_LENGTH];
+    string srcIP;
+	unsigned short srcPort;
+
+    while(1) {
+        int iRecv = m_UDPInterface.RecvFrom(buf, BUFFER_LENGTH, srcIP, srcPort);
+    	if(iRecv < 0)
+    	{
+    	    printf("recvfrom(): error %d when user on.\n", iRecv);
+    		continue;
+        }
+
+		printf("[recv packet from %s %d:] \n", srcIP.data(), srcPort);
+	    for(int i = 0; i < iRecv; i++)
+	        printf("0x%02X ", buf[i]);
+        printf("\n");
+
+		if( ntohl(*(int*) (buf+dest_user)) != m_userID) {
+			printf("dest_user_id: %d \n", ntohl(* (int*) (buf+dest_user)));
+		    continue;
+		}
+		if( ntohl(*(int*) (buf+src_user)) != 0) {
+			printf("src_user_id: %d \n", ntohl(* (int*) (buf+src_user)));
+		    continue;
+		}
+		/*
+		if( ntohs(*(unsigned short*) (buf+frame_id)) != m_frameNo + 1) {
+			printf("frame_id: %d %d \n", m_frameNo, ntohs(* (unsigned short*) (buf+frame_id)));
+		    continue;
+		}
+		*/
+		if(*(buf+option) != 0x80) {
+			printf("option word: %d \n", (*(buf+option)));
+		    continue;
+		}
+    	if(* (buf+ret) == 0x03) {
+    	    printf("移动性报告成功！ \n");
+    		m_frameNo += 2;
+    	    return 0;
+    	}
+
+		break;
+	}
+
+    return -1;
+}
+
+int Client::userMove()
+{
+    unsigned char buf[BUFFER_LENGTH] = {
+	0x00, 0x00, 0x00, 0x00, /* 4 dest user */ 
+	0x00, 0x00, 0x00, 0x01, /* 8 src user */
+	0x00, 0xff,             /* 10 frame id */
+    0x03, 0x00,             /* 12 OPTION: user on */	
+	0x00, 0x00, 0x00, 0x00, /* 16 time stamp */
+	0x00,                   /* 17 E/W, S/N */
+	0x00, 0x00, 0x00, 0x00, /* 21 longitude */
+	0x00, 0x00, 0x00, 0x00, /* 25 latitude */
+	0x00, 0x00, 0x00, 0x00, /* 29 altitude */
+	0x01,                   /* 30 cable network */
+	0x02,                   /* 31 beam length */
+	0x00, 0x00,             /* 33 beam id */
+	0x00, 0x00, 0x00, 0x00, /* 37 SNR */
+	0x00, 0x01,             /* 39 beam id */
+	0x00, 0x00, 0x00, 0x00, /* 43 SNR */
+	};
+
+    /* SET frame id*/
+    unsigned short *pFrame = (unsigned short *) (buf + POS::frame_id);
+	*pFrame = htons(m_frameNo);
+
+	/* SET time stamp */
+	time_t stamp = time(NULL);
+	unsigned int *pStamp = ( unsigned int *) (buf + POS::stamp);
+    *pStamp = (unsigned int) htonl(stamp);
+
+	/* SET SNR */
+	for(int i = 0; i < SNR_LEN; i++) {
+        int *pSNR = (int *) (buf + i * 6 + POS::snr + 2);
+		/* float(1.0): [signal, exponent, fraction]=[0, 127, 0]=[3f 80 00 00] */
+		int *tmp = (int *) new float(1.0);
+        *pSNR = htonl(*tmp);
+	}
+
+	int packet_len = POS::snr + 6 * SNR_LEN;  
+    printf("[send packet to: %s %d]\n", m_channelIP.data(), m_channelPort);
+	for(int i = 0; i < packet_len; i++)
+	     printf("0x%02X ", buf[i]);
+	printf("\n");
+
+    int iSend = m_UDPInterface.SendTo(buf, packet_len, m_channelIP, m_channelPort);
+	if (iSend < 0)
+	{
+	    printf("sendto(): error %d when user on.\n", iSend);
+		return -1;
+	}
+    
+	userOnWait();
+    return 0;
+
+}
 int Client::userRecvWait(unsigned int id)
 {
     unsigned char buf[BUFFER_LENGTH] = {
