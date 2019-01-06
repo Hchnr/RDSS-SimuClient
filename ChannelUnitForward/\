@@ -97,13 +97,6 @@ int ChannelUnitForward::readInitFile()
 {
     char buf[BUFFER_LENGTH];
 
-    if (!read_profile_string("Meta", "name", buf, 16, "forward", INI_FILE_NAME))
-    {
-        printf("%s: Read Channel Name from %s failed!\n", m_name.data(), INI_FILE_NAME);
-        return -1;
-    }
-    m_name = buf;
-
         /* READ server */
     m_serverBackwardPort = (unsigned short) read_profile_int("Server", "BackwardPort", 0, INI_FILE_NAME);
     if (m_serverBackwardPort == 0)
@@ -127,24 +120,36 @@ int ChannelUnitForward::readInitFile()
         return -1;
     }
 
-    serverForwardPortIndex = (unsigned short) read_profile_int("Server", "ForwardPortIndex", 0, INI_FILE_NAME);
-    printf("Server Forward Port index: %d\n\n", serverForwardPortIndex);
-
-    string sector = "ForwardPort" + std::to_string(serverForwardPortIndex);
-    m_serverForwardPort =  (unsigned short) read_profile_int("Server", sector.data(), 0, INI_FILE_NAME);
-    if (m_serverForwardPort == 0)
+    serverForwardPortIndex = (unsigned short) read_profile_int("Server", "serverForwardPortIndex", 0, INI_FILE_NAME);
+    if (serverForwardPortLength == 0)
     {
-        printf("%s: Read ServerForwardPort from %s failed!\n", m_name.data(), INI_FILE_NAME);
+        printf("%s: Read ServerForwardPortIndex from %s failed!\n", m_name.data(), INI_FILE_NAME);
         return -1;
     }
 
-    /* READ client */
-    int clientNum = read_profile_int("Client", "Length", -1, INI_FILE_NAME);
-    if (clientNum == -1)
+    vector<unsigned short> serverForwardPorts;
+        for (int i = 0; i < serverForwardPortLength; i ++)
     {
-    printf("%s: Read client length from %s failed!\n", m_name.data(), INI_FILE_NAME);
+        string sector = "ForwardPort" + std::to_string(i);
+
+                unsigned short port = (unsigned short) read_profile_int("Server", sector.data(), 0, INI_FILE_NAME);
+        if (port == 0)
+        {
+            printf("%s: Read server forward port from %s failed!\n", m_name.data(), INI_FILE_NAME);
             return -1;
-    }
+        }
+
+        serverForwardPorts.push_back(port);
+        }
+        m_serverForwardPort = serverForwardPorts[serverForwardPortIndex];
+
+        /* READ client */
+        int clientNum = read_profile_int("Client", "Length", -1, INI_FILE_NAME);
+        if (clientNum == -1)
+        {
+        printf("%s: Read client length from %s failed!\n", m_name.data(), INI_FILE_NAME);
+                return -1;
+        }
 
     m_clientPort = (unsigned short) read_profile_int("Client", "Port", 0, INI_FILE_NAME);
     if (m_clientPort == 0)
