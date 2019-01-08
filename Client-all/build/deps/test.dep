@@ -1,0 +1,2 @@
+build/objs/test.o build/deps/test.dep:test.cpp Client.h inifile.h udp_socket.h utils.h comm_socket.h \
+ epoll_wrapper.h
