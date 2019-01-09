@@ -1,0 +1,1 @@
+build/objs/inifile.o build/deps/inifile.dep:inifile.cpp inifile.h

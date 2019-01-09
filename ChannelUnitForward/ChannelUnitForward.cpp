@@ -97,7 +97,7 @@ int ChannelUnitForward::readInitFile()
 {
     char buf[BUFFER_LENGTH];
 
-    if (!read_profile_string("Meta", "name", buf, 16, "forward", INI_FILE_NAME))
+    if (!read_profile_string("Meta", "Name", buf, 16, "forward", INI_FILE_NAME))
     {
         printf("%s: Read Channel Name from %s failed!\n", m_name.data(), INI_FILE_NAME);
         return -1;
