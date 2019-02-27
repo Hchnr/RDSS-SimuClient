@@ -40,11 +40,13 @@ int ChannelUnitBackward::Run()
         return -1;
     }
     m_TcpSocket.SetBlocking(true);
+	printf("1\n");
     if (! m_TcpSocket.Connect(m_serverIP.data(), m_serverBackwardPort) )
     {
         printf("Connect TCP error!\n");
         return -1;
     }
+	printf("2\n");
 
     if (m_UDPInterface.Create(m_clientPort))
     {
