@@ -23,8 +23,8 @@ class ChannelUnitBackward
 	unsigned short m_clientPort;
 	vector<unsigned short> m_clientPorts;
 	vector<string> m_clientIPs;
-    CUDPInterface m_UDPInterface;
-    TcpSocket m_TcpSocket;
+  CUDPInterface m_UDPInterface;
+  TcpSocket m_TcpSocket;
 
 	int readInitFile();
 };
